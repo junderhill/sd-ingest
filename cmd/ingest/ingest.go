@@ -49,6 +49,15 @@ var CmdIngest = &cobra.Command{
 
 		if viper.GetBool("verbose") {
 			fmt.Printf("Converted files: %+v\n", files)
+			fmt.Printf("Grouping...")
+		}
+
+		photos, videos := GroupFiles(files)
+
+		if viper.GetBool("verbose") {
+			fmt.Println()
+			fmt.Printf("Photos %v \n", photos)
+			fmt.Printf("Videos %v \n", videos)
 		}
 
 	},
