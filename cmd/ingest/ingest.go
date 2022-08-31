@@ -2,12 +2,13 @@ package ingest
 
 import (
 	"fmt"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"io/fs"
 	"path/filepath"
 	"sd-ingest/util"
 	"strings"
+
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var source string
@@ -51,6 +52,37 @@ var CmdIngest = &cobra.Command{
 		}
 
 	},
+}
+
+func GroupFiles(files []util.File) (map[string][]util.File, map[string][]util.File) {
+
+	//returns 2 maps of file slices
+	// map key is the date in a string format '20220830'
+
+	photos := make(map[string][]util.File)
+	videos := make(map[string][]util.File)
+
+	for _, v := range files {
+		dateStr := v.Timestamp.Format("20060102")
+
+		if v.Type == "video" {
+			dateSlice, exists := videos[dateStr]
+			if !exists {
+				dateSlice = make([]util.File, 0)
+			}
+
+			videos[dateStr] = append(dateSlice, v)
+		} else {
+			dateSlice, exists := photos[dateStr]
+			if !exists {
+				dateSlice = make([]util.File, 0)
+			}
+
+			photos[dateStr] = append(dateSlice, v)
+		}
+	}
+
+	return photos, videos
 }
 
 func FilterFiles(files []string, includes []string) []string {

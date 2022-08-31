@@ -2,6 +2,9 @@ package ingest
 
 import (
 	"testing"
+	"time"
+
+	"sd-ingest/util"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -53,4 +56,36 @@ func TestFilterFilesRetainsAllIfNonToBeExcluded(t *testing.T) {
 	output := FilterFiles(input, includes)
 
 	assert.ElementsMatch(t, input, output, "Expected all input elements to be included in filtered result.")
+}
+
+func TestGroupFilesGroupsPhotosAndVideosSeperately(t *testing.T) {
+	input := []util.File{
+		util.File{
+			Filename:  "DSC0001.jpg",
+			Path:      "/temp/DSC0001.jpg",
+			Type:      "photo",
+			Timestamp: time.Date(2022, time.August, 30, 12, 30, 00, 00, time.UTC),
+		},
+		util.File{
+			Filename:  "DSC0002.mp4",
+			Path:      "/temp/DSC0002.mp4",
+			Type:      "video",
+			Timestamp: time.Date(2022, time.August, 30, 12, 30, 00, 00, time.UTC),
+		},
+	}
+
+	photos, videos := GroupFiles(input)
+
+	assert.Len(t, photos, 1)
+	assert.Len(t, videos, 1)
+
+	for _, p := range photos {
+		assert.Len(t, p, 1)
+		assert.Equal(t, p[0].Type, "photo")
+	}
+
+	for _, v := range videos {
+		assert.Len(t, v, 1)
+		assert.Equal(t, v[0].Type, "video")
+	}
 }
