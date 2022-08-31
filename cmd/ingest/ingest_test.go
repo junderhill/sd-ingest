@@ -122,3 +122,11 @@ func TestGroupFilesIncludesPhotosFromSameDateInSameMapKey(t *testing.T) {
 
 	assert.Len(t, photos["20220830"], 3)
 }
+
+func TestGetPathWillHandleAddingPathSeperator(t *testing.T) {
+	output := GetPath("/Temp", "20220830", "")
+	assert.Equal(t, "/Temp/20220830", output)
+
+	output2 := GetPath("/Temp/", "20220830", "")
+	assert.Equal(t, "/Temp/20220830", output2)
+}

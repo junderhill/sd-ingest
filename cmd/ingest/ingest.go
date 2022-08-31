@@ -1,11 +1,15 @@
 package ingest
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
+	"log"
+	"os"
 	"path/filepath"
 	"sd-ingest/util"
 	"strings"
+	"sync"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -60,7 +64,52 @@ var CmdIngest = &cobra.Command{
 			fmt.Printf("Videos %v \n", videos)
 		}
 
+		wg := sync.WaitGroup{}
+		wg.Add(2)
+
+		CopyFiles(photos, viper.GetString("photos.destination"), &wg)
+		CopyFiles(videos, viper.GetString("videos.destination"), &wg)
+
+		wg.Wait()
+
 	},
+}
+
+func CopyFiles(files map[string][]util.File, destinationPath string, s *sync.WaitGroup) {
+
+	for key, value := range files {
+
+		dest := GetPath(destinationPath, key, destSuffix)
+
+		if _, err := os.Stat(dest); errors.Is(err, os.ErrNotExist) {
+			err := os.Mkdir(dest, os.ModePerm)
+			if err != nil {
+				log.Println(err)
+			}
+		}
+
+		for _, file := range value {
+			
+			//todo: copy file
+		}
+	}
+
+	s.Done()
+}
+
+func GetPath(basePath string, date string, suffix string) string {
+	//todo: look for a package to allow this work cross platform
+	newDirectoryName := date
+
+	if suffix != "" {
+		newDirectoryName = fmt.Sprintf("%s_%s", date, suffix)
+	}
+
+	if strings.HasSuffix(basePath, "/") {
+		return fmt.Sprintf("%s%s", basePath, newDirectoryName)
+	} else {
+		return fmt.Sprintf("%s/%s", basePath, newDirectoryName)
+	}
 }
 
 func GroupFiles(files []util.File) (map[string][]util.File, map[string][]util.File) {
