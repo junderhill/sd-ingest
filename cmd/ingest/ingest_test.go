@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var includes []string = []string{
+var includes = []string{
 	"jpg",
 	"dng",
 }
@@ -60,13 +60,13 @@ func TestFilterFilesRetainsAllIfNonToBeExcluded(t *testing.T) {
 
 func TestGroupFilesGroupsPhotosAndVideosSeperately(t *testing.T) {
 	input := []util.File{
-		util.File{
+		{
 			Filename:  "DSC0001.jpg",
 			Path:      "/temp/DSC0001.jpg",
 			Type:      "photo",
 			Timestamp: time.Date(2022, time.August, 30, 12, 30, 00, 00, time.UTC),
 		},
-		util.File{
+		{
 			Filename:  "DSC0002.mp4",
 			Path:      "/temp/DSC0002.mp4",
 			Type:      "video",
@@ -88,4 +88,37 @@ func TestGroupFilesGroupsPhotosAndVideosSeperately(t *testing.T) {
 		assert.Len(t, v, 1)
 		assert.Equal(t, v[0].Type, "video")
 	}
+}
+
+func TestGroupFilesIncludesPhotosFromSameDateInSameMapKey(t *testing.T) {
+	input := []util.File{
+		{
+			Filename:  "DSC0001.jpg",
+			Path:      "/temp/DSC0001.jpg",
+			Type:      "photo",
+			Timestamp: time.Date(2022, time.August, 30, 12, 15, 00, 00, time.UTC),
+		},
+		{
+			Filename:  "DSC0002.jpg",
+			Path:      "/temp/DSC0002.jpg",
+			Type:      "photo",
+			Timestamp: time.Date(2022, time.August, 30, 12, 20, 00, 00, time.UTC),
+		},
+		{
+			Filename:  "DSC0099.jpg",
+			Path:      "/temp/DSC0099.jpg",
+			Type:      "photo",
+			Timestamp: time.Date(2022, time.August, 31, 12, 25, 00, 00, time.UTC),
+		},
+		{
+			Filename:  "DSC0003.jpg",
+			Path:      "/temp/DSC0003.jpg",
+			Type:      "photo",
+			Timestamp: time.Date(2022, time.August, 30, 12, 25, 00, 00, time.UTC),
+		},
+	}
+
+	photos, _ := GroupFiles(input)
+
+	assert.Len(t, photos["20220830"], 3)
 }
