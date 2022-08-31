@@ -2,12 +2,12 @@ package ingest
 
 import (
 	"fmt"
-	"io/fs"
-	"path/filepath"
-	"strings"
-
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"io/fs"
+	"path/filepath"
+	"sd-ingest/util"
+	"strings"
 )
 
 var source string
@@ -35,11 +35,21 @@ var CmdIngest = &cobra.Command{
 			"mp4",
 		}
 
-		files := FilterFiles(allFiles, includes)
+		filteredFilenames := FilterFiles(allFiles, includes)
 
 		if viper.GetBool("verbose") {
-			fmt.Printf("Filtered files: %s\n", files)
+			fmt.Printf("Filtered files: %s\n", filteredFilenames)
 		}
+
+		files := make([]util.File, 0)
+		for _, f := range filteredFilenames {
+			files = append(files, *util.NewFile(f))
+		}
+
+		if viper.GetBool("verbose") {
+			fmt.Printf("Converted files: %+v\n", files)
+		}
+
 	},
 }
 
@@ -64,7 +74,7 @@ func GetFilesFromSource() []string {
 		fmt.Printf("Source Directory: %s\n", sourceDirectory)
 	}
 
-	files := []string{}
+	var files []string
 
 	filepath.WalkDir(sourceDirectory, func(path string, d fs.DirEntry, err error) error {
 
