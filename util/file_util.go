@@ -11,6 +11,7 @@ type File struct {
 	Filename  string
 	Path      string
 	Type      string
+	Size      int64
 	Timestamp time.Time
 }
 
@@ -51,6 +52,7 @@ func NewFile(path string) *File {
 		Path:      path,
 		Type:      fileType,
 		Filename:  fileInfo.Name(),
+		Size:      fileInfo.Size(),
 		Timestamp: fileInfo.ModTime(),
 	}
 }

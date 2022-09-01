@@ -39,10 +39,6 @@ func initConfig() {
 		fmt.Println("Can't read config:", error)
 		os.Exit(1)
 	}
-
-	fmt.Println(viper.AllSettings())
-	fmt.Println(viper.GetString("photos.destination"))
-	fmt.Println(viper.GetString("video.destination"))
 }
 
 var rootCmd = &cobra.Command{

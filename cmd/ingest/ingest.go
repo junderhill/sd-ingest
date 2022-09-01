@@ -32,13 +32,7 @@ var CmdIngest = &cobra.Command{
 	Short: "Ingest from SD card",
 	Run: func(cmd *cobra.Command, args []string) {
 		allFiles := GetFilesFromSource()
-
-		includes := []string{ //todo: pull this from the yaml config
-			"arw",
-			"jpg",
-			"dng",
-			"mp4",
-		}
+		includes := GetIncludes()
 
 		filteredFilenames := FilterFiles(allFiles, includes)
 
@@ -58,15 +52,35 @@ var CmdIngest = &cobra.Command{
 		wg := sync.WaitGroup{}
 		wg.Add(2)
 
-		go CopyFiles(photos, viper.GetString("photos.destination"), &wg)
-		go CopyFiles(videos, viper.GetString("video.destination"), &wg)
+		totalBytesCopied := &util.SafeInt64Count{}
+		totalFilesCopied := &util.SafeIntCount{}
 
+		go CopyFiles(photos, viper.GetString("photos.destination"), &wg, totalFilesCopied, totalBytesCopied)
+		go CopyFiles(videos, viper.GetString("video.destination"), &wg, totalFilesCopied, totalBytesCopied)
 		wg.Wait()
 
+		fmt.Println("Ingest Complete")
+		fmt.Printf("Total Files: %d Total Size: %s", totalFilesCopied.Value(), util.ByteCountIEC(totalBytesCopied.Value()))
 	},
 }
 
-func CopyFiles(files map[string][]util.File, destinationPath string, s *sync.WaitGroup) {
+func GetIncludes() []string {
+	photoExts := viper.GetStringSlice("photos.formats")
+	videoExts := viper.GetStringSlice("video.formats")
+
+	output := make([]string, 0)
+
+	for _, ext := range photoExts {
+		output = append(output, strings.ToLower(ext))
+	}
+	for _, ext := range videoExts {
+		output = append(output, strings.ToLower(ext))
+	}
+
+	return output
+}
+
+func CopyFiles(files map[string][]util.File, destinationPath string, s *sync.WaitGroup, fileCount *util.SafeIntCount, byteCount *util.SafeInt64Count) {
 	for key, value := range files {
 
 		dest := GetPath(destinationPath, key, destSuffix)
@@ -89,6 +103,9 @@ func CopyFiles(files map[string][]util.File, destinationPath string, s *sync.Wai
 			_, err := copyFile(file.Path, destinationFilename)
 			if err != nil {
 				log.Println(err)
+			} else {
+				fileCount.Increment(1)
+				byteCount.Increment(file.Size)
 			}
 		}
 	}
