@@ -43,7 +43,9 @@ var CmdIngest = &cobra.Command{
 		filteredFilenames := FilterFiles(allFiles, includes)
 
 		if viper.GetBool("verbose") {
-			fmt.Printf("Filtered files: %s\n", filteredFilenames)
+			for _, i := range filteredFilenames {
+				fmt.Printf("Found %s\n", i)
+			}
 		}
 
 		files := make([]util.File, 0)
@@ -51,24 +53,13 @@ var CmdIngest = &cobra.Command{
 			files = append(files, *util.NewFile(f))
 		}
 
-		if viper.GetBool("verbose") {
-			fmt.Printf("Converted files: %+v\n", files)
-			fmt.Printf("Grouping...")
-		}
-
 		photos, videos := GroupFiles(files)
-
-		if viper.GetBool("verbose") {
-			fmt.Println()
-			fmt.Printf("Photos %v \n", photos)
-			fmt.Printf("Videos %v \n", videos)
-		}
 
 		wg := sync.WaitGroup{}
 		wg.Add(2)
 
-		CopyFiles(photos, viper.GetString("photos.destination"), &wg)
-		CopyFiles(videos, viper.GetString("videos.destination"), &wg)
+		go CopyFiles(photos, viper.GetString("photos.destination"), &wg)
+		go CopyFiles(videos, viper.GetString("video.destination"), &wg)
 
 		wg.Wait()
 
@@ -76,25 +67,47 @@ var CmdIngest = &cobra.Command{
 }
 
 func CopyFiles(files map[string][]util.File, destinationPath string, s *sync.WaitGroup) {
-
 	for key, value := range files {
 
 		dest := GetPath(destinationPath, key, destSuffix)
 
 		if _, err := os.Stat(dest); errors.Is(err, os.ErrNotExist) {
+			if viper.GetBool("verbose") {
+				fmt.Printf("Creating Directory: %s \n", dest)
+			}
 			err := os.Mkdir(dest, os.ModePerm)
-			if err != nil {
-				log.Println(err)
+			if err != nil && !os.IsExist(err) {
+				fmt.Println(err)
 			}
 		}
 
 		for _, file := range value {
-			
-			//todo: copy file
+			destinationFilename := fmt.Sprintf("%s/%s", dest, file.Filename)
+			if viper.GetBool("verbose") {
+				fmt.Printf("Copying %s to %s \n", file.Filename, destinationFilename)
+			}
+			_, err := copyFile(file.Path, destinationFilename)
+			if err != nil {
+				log.Println(err)
+			}
 		}
 	}
 
 	s.Done()
+}
+
+func copyFile(in, out string) (int64, error) {
+	i, e := os.Open(in)
+	if e != nil {
+		return 0, e
+	}
+	defer i.Close()
+	o, e := os.Create(out)
+	if e != nil {
+		return 0, e
+	}
+	defer o.Close()
+	return o.ReadFrom(i)
 }
 
 func GetPath(basePath string, date string, suffix string) string {
@@ -167,10 +180,6 @@ func GetFilesFromSource() []string {
 	var files []string
 
 	filepath.WalkDir(sourceDirectory, func(path string, d fs.DirEntry, err error) error {
-
-		if viper.GetBool("verbose") {
-			fmt.Printf("Found %s\n", path)
-		}
 
 		if !d.IsDir() {
 			files = append(files, path)
