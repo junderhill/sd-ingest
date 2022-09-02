@@ -19,13 +19,13 @@ jobs:
         go-version: 1.18
 
     - name: Test
-      run: go test  -v ./...
+      run: go test
 
     - name: Build
       run: |
         commit=`git rev-parse --short HEAD`
         built_at=`date +%FT%T%z`
-        go build -ldflags "-X main.commit=${commit} -X main.builtAt='${built_at}'" -v ./...
+        go build -ldflags "-X main.commit=${commit} -X main.builtAt='${built_at}'" 
         ls -la
         pwd
 
