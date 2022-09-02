@@ -25,12 +25,16 @@ jobs:
       run: |
         commit=`git rev-parse --short HEAD`
         built_at=`date +%FT%T%z`
-        go build -ldflags "-X main.commit=${commit} -X main.builtAt='${built_at}'" 
-        ls -la
-        pwd
+        GOOS=darwin GOARCH=amd64 go build -o sd-ingest_amd64 -ldflags "-X main.commit=${commit} -X main.builtAt='${built_at}'" 
+        GOOS=darwin GOARCH=arm64 go build -o sd-ingest_arm64 -ldflags "-X main.commit=${commit} -X main.builtAt='${built_at}'" 
 
-
-    - name: Artifacts
+    - name: 'AMD 64 Build'
       uses: actions/upload-artifact@v3
       with:
-        path: ./sd-ingest
+        name: sd-ingest_amd64
+        path: ./sd-ingest_amd64
+    - name: 'ARM 64 Build'
+      uses: actions/upload-artifact@v3
+      with:
+        name: sd-ingest_arm64
+        path: ./sd-ingest_arm64
