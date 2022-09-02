@@ -18,11 +18,11 @@ jobs:
       with:
         go-version: 1.18
 
-    - name: Build
-      run: go build  -v ./...
-
     - name: Test
+      run: go test  -v ./...
+
+    - name: Build
       run: |
         commit=`git rev-parse --short HEAD`
         built_at=`date +%FT%T%z`
-        go test -v ./... -ldflags "-X main.commit ${commit} -X main.builtAt '${built_at}'"
+        go build -v ./... -ldflags "-X main.commit ${commit} -X main.builtAt '${built_at}'"
