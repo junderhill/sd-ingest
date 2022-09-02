@@ -8,7 +8,7 @@ import (
 var (
 	commit  string
 	builtAt string
-	version string
+	version = "0.1"
 )
 
 func main() {
