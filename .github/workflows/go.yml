@@ -25,4 +25,4 @@ jobs:
       run: |
         commit=`git rev-parse --short HEAD`
         built_at=`date +%FT%T%z`
-        go build -v ./... -ldflags "-X main.commit ${commit} -X main.builtAt '${built_at}'"
+        go build -ldflags "-X main.commit ${commit} -X main.builtAt '${built_at}'" -v ./...
