@@ -26,6 +26,9 @@ jobs:
         commit=`git rev-parse --short HEAD`
         built_at=`date +%FT%T%z`
         go build -ldflags "-X main.commit=${commit} -X main.builtAt='${built_at}'" -v ./...
+        ls -la
+        pwd
+
 
     - name: Artifacts
       uses: actions/upload-artifact@v3
