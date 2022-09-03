@@ -10,6 +10,7 @@ import (
 	"sd-ingest/util"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -17,20 +18,29 @@ import (
 
 var source string
 var destSuffix string
+var fromDate string
 
 func init() {
 	CmdIngest.Flags().StringVar(&source, "source", "", "Set the source directory to copy files from")
 	CmdIngest.MarkFlagRequired("source")
 	CmdIngest.Flags().StringVar(&destSuffix, "dest-suffix", "", "(Optional) Suffix to add to destination directories.")
+	CmdIngest.Flags().StringVar(&fromDate, "from-date", "", "(Optional) From date to ingest images from.")
 
 	viper.BindPFlag("source", CmdIngest.Flags().Lookup("source"))
 	viper.BindPFlag("dest-suffix", CmdIngest.Flags().Lookup("dest-suffix"))
+	viper.BindPFlag("from-date", CmdIngest.Flags().Lookup("from-date"))
 }
 
 var CmdIngest = &cobra.Command{
 	Use:   "ingest",
 	Short: "Ingest from SD card",
 	Run: func(cmd *cobra.Command, args []string) {
+
+		fromDateFlag, err := ValidateFromDateFlag(fromDate)
+		if err != nil {
+			fmt.Printf("Invalid format for from-date flag, format should be YYYYMMDD or YYYY-MM-DD")
+		}
+
 		allFiles := GetFilesFromSource()
 		includes := GetIncludes()
 
@@ -47,7 +57,7 @@ var CmdIngest = &cobra.Command{
 			files = append(files, *util.NewFile(f))
 		}
 
-		photos, videos := GroupFiles(files)
+		photos, videos := GroupFiles(files, fromDateFlag)
 
 		wg := sync.WaitGroup{}
 		wg.Add(2)
@@ -62,6 +72,25 @@ var CmdIngest = &cobra.Command{
 		fmt.Println("Ingest Complete")
 		fmt.Printf("Total Files: %d Total Size: %s", totalFilesCopied.Value(), util.ByteCountIEC(totalBytesCopied.Value()))
 	},
+}
+
+func ValidateFromDateFlag(fromDate string) (*time.Time, error) {
+	if fromDate != "" {
+		dateLayouts := []string{"2006-01-02", "20060102"}
+		errs := make([]error, 0)
+
+		for _, layout := range dateLayouts {
+			time, err := time.Parse(layout, fromDate)
+			if err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			return &time, nil
+		}
+
+		return nil, errs[0]
+	}
+	return nil, nil
 }
 
 func GetIncludes() []string {
@@ -142,7 +171,7 @@ func GetPath(basePath string, date string, suffix string) string {
 	}
 }
 
-func GroupFiles(files []util.File) (map[string][]util.File, map[string][]util.File) {
+func GroupFiles(files []util.File, fromDate *time.Time) (map[string][]util.File, map[string][]util.File) {
 
 	//returns 2 maps of file slices
 	// map key is the date in a string format '20220830'
@@ -152,6 +181,15 @@ func GroupFiles(files []util.File) (map[string][]util.File, map[string][]util.Fi
 
 	for _, v := range files {
 		dateStr := v.Timestamp.Format("20060102")
+
+		if fromDate != nil {
+			if v.Timestamp.Before(*fromDate) {
+				if viper.GetBool("verbose") {
+					fmt.Printf("Skipping %s before 'from-date'\n", v.Filename)
+				}
+				continue
+			}
+		}
 
 		if v.Type == "video" {
 			dateSlice, exists := videos[dateStr]

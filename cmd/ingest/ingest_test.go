@@ -74,7 +74,7 @@ func TestGroupFilesGroupsPhotosAndVideosSeperately(t *testing.T) {
 		},
 	}
 
-	photos, videos := GroupFiles(input)
+	photos, videos := GroupFiles(input, nil)
 
 	assert.Len(t, photos, 1)
 	assert.Len(t, videos, 1)
@@ -118,9 +118,46 @@ func TestGroupFilesIncludesPhotosFromSameDateInSameMapKey(t *testing.T) {
 		},
 	}
 
-	photos, _ := GroupFiles(input)
+	photos, _ := GroupFiles(input, nil)
 
 	assert.Len(t, photos["20220830"], 3)
+}
+
+func TestGroupFilesExcludesResultsWhereModifiedTimestampIsBeforeFromDate(t *testing.T) {
+	input := []util.File{
+		{
+			Filename:  "DSC0001.jpg",
+			Path:      "/temp/DSC0001.jpg",
+			Type:      "photo",
+			Timestamp: time.Date(2022, time.August, 30, 12, 15, 00, 00, time.UTC),
+		},
+		{
+			Filename:  "DSC0002.jpg",
+			Path:      "/temp/DSC0002.jpg",
+			Type:      "photo",
+			Timestamp: time.Date(2022, time.August, 30, 12, 20, 00, 00, time.UTC),
+		},
+		{
+			Filename:  "DSC0099.jpg",
+			Path:      "/temp/DSC0099.jpg",
+			Type:      "photo",
+			Timestamp: time.Date(2022, time.August, 31, 12, 25, 00, 00, time.UTC),
+		},
+		{
+			Filename:  "DSC0003.jpg",
+			Path:      "/temp/DSC0003.jpg",
+			Type:      "photo",
+			Timestamp: time.Date(2022, time.August, 29, 12, 25, 00, 00, time.UTC),
+		},
+	}
+
+	fromDate := time.Date(2022, time.August, 30, 0, 0, 0, 0, time.UTC)
+	photos, _ := GroupFiles(input, &fromDate)
+
+	_, exists := photos["20220829"]
+	assert.False(t, exists)
+	assert.Len(t, photos["20220830"], 2)
+
 }
 
 func TestGetPathWillHandleAddingPathSeperator(t *testing.T) {
