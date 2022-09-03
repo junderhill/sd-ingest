@@ -22,19 +22,23 @@ jobs:
       run: go test
 
     - name: Build
+      id: build-go
       run: |
+        version=`cat version`
         commit=`git rev-parse --short HEAD`
         built_at=`date +%FT%T%z`
-        GOOS=darwin GOARCH=amd64 go build -o sd-ingest_amd64 -ldflags "-X main.commit=${commit} -X main.builtAt='${built_at}'" 
-        GOOS=darwin GOARCH=arm64 go build -o sd-ingest_arm64 -ldflags "-X main.commit=${commit} -X main.builtAt='${built_at}'" 
+        GOOS=darwin GOARCH=amd64 go build -o "sd-ingest_amd64_${version}" -ldflags "-X main.commit=${commit} -X main.builtAt='${built_at}' -X main.version='${version}'" 
+        GOOS=darwin GOARCH=arm64 go build -o "sd-ingest_arm64_${version}" -ldflags "-X main.commit=${commit} -X main.builtAt='${built_at}' -X main.version='${version}'" 
+        echo "::set-output name=fileamd64::sd-ingest_amd64_${version}"
+        echo "::set-output name=filearm64::sd-ingest_arm64_${version}"
 
     - name: 'AMD 64 Build'
       uses: actions/upload-artifact@v3
       with:
         name: sd-ingest_amd64
-        path: ./sd-ingest_amd64
+        path: ${{ steps.build-go.outputs.fileamd64 }} 
     - name: 'ARM 64 Build'
       uses: actions/upload-artifact@v3
       with:
         name: sd-ingest_arm64
-        path: ./sd-ingest_arm64
+        path: ${{ steps.build-go.outputs.filearm64 }} 
