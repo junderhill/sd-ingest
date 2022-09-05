@@ -111,7 +111,6 @@ func GetIncludes() []string {
 
 func CopyFiles(files map[string][]util.File, destinationPath string, s *sync.WaitGroup, fileCount *util.SafeIntCount, byteCount *util.SafeInt64Count) {
 	for key, value := range files {
-
 		dest := GetPath(destinationPath, key, destSuffix)
 
 		if _, err := os.Stat(dest); errors.Is(err, os.ErrNotExist) {
@@ -121,6 +120,7 @@ func CopyFiles(files map[string][]util.File, destinationPath string, s *sync.Wai
 			err := os.Mkdir(dest, os.ModePerm)
 			if err != nil && !os.IsExist(err) {
 				fmt.Println(err)
+				os.Exit(1)
 			}
 		}
 
