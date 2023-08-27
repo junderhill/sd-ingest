@@ -110,35 +110,42 @@ func GetIncludes() []string {
 }
 
 func CopyFiles(files map[string][]util.File, destinationPath string, s *sync.WaitGroup, fileCount *util.SafeIntCount, byteCount *util.SafeInt64Count) {
+	wg := sync.WaitGroup{}
+	wg.Add(len(files))
+
 	for key, value := range files {
-		dest := GetPath(destinationPath, key, destSuffix)
+		go func(key string, value []util.File) {
+			dest := GetPath(destinationPath, key, destSuffix)
+			if _, err := os.Stat(dest); errors.Is(err, os.ErrNotExist) {
+				if viper.GetBool("verbose") {
+					fmt.Printf("Creating Directory: %s \n", dest)
+				}
+				err := os.Mkdir(dest, os.ModePerm)
+				if err != nil && !os.IsExist(err) {
+					fmt.Println(err)
+					os.Exit(1)
+				}
+			}
 
-		if _, err := os.Stat(dest); errors.Is(err, os.ErrNotExist) {
-			if viper.GetBool("verbose") {
-				fmt.Printf("Creating Directory: %s \n", dest)
+			for _, file := range value {
+				destinationFilename := fmt.Sprintf("%s/%s", dest, file.Filename)
+				if viper.GetBool("verbose") {
+					fmt.Printf("Copying %s to %s \n", file.Filename, destinationFilename)
+				}
+				_, err := copyFile(file.Path, destinationFilename)
+				if err != nil {
+					log.Println(err)
+				} else {
+					fileCount.Increment(1)
+					byteCount.Increment(file.Size)
+				}
 			}
-			err := os.Mkdir(dest, os.ModePerm)
-			if err != nil && !os.IsExist(err) {
-				fmt.Println(err)
-				os.Exit(1)
-			}
-		}
 
-		for _, file := range value {
-			destinationFilename := fmt.Sprintf("%s/%s", dest, file.Filename)
-			if viper.GetBool("verbose") {
-				fmt.Printf("Copying %s to %s \n", file.Filename, destinationFilename)
-			}
-			_, err := copyFile(file.Path, destinationFilename)
-			if err != nil {
-				log.Println(err)
-			} else {
-				fileCount.Increment(1)
-				byteCount.Increment(file.Size)
-			}
-		}
+			wg.Done()
+		}(key, value)
 	}
 
+	wg.Wait()
 	s.Done()
 }
 
